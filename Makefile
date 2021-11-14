@@ -9,3 +9,7 @@ compile:
 .PHONY: run
 run: compile
 	HYPERION_CHILD=false sudo -E $(BIN_DIR)/$(BIN_NAME)
+
+.PHONY: hyper-run
+hyper-run: compile
+	sudo -E $(BIN_DIR)/$(BIN_NAME)
