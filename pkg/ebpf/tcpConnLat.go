@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/sagacious-labs/hyperion-network-watcher/pkg/log"
 )
 
 // TCPConnLat implements ebpf program interface
@@ -15,8 +17,8 @@ import (
 // It provides interface to get TCP connection latency
 // data from the host machine
 type TCPConnLat struct {
-	stop chan struct{}
 	bin  string
+	proc *exec.Cmd
 }
 
 // TCPConnLatData is the data format which is internally returned
@@ -42,8 +44,7 @@ func (d *TCPConnLatData) ToBytes() []byte {
 // NewTCPConnLat returns instance of TCP connection latency prober
 func NewTCPConnLat() EBPFProgram {
 	return &TCPConnLat{
-		stop: make(chan struct{}),
-		bin:  "/usr/share/bcc/tools/tcpconnlat",
+		bin: "/usr/share/bcc/tools/tcpconnlat",
 	}
 }
 
@@ -53,6 +54,8 @@ func NewTCPConnLat() EBPFProgram {
 // NOTE: The channel must not be blocked
 func (c *TCPConnLat) Start() <-chan []byte {
 	cmd := exec.Command(c.bin)
+	c.proc = cmd
+
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "PYTHONUNBUFFERED=true")
 
@@ -80,26 +83,14 @@ func (c *TCPConnLat) Start() <-chan []byte {
 			}
 
 			parsed, _ := c.ParseStdout(data)
+			if parsed == nil {
+				continue
+			}
 
 			ch <- parsed.ToBytes()
 		}
 
 		close(ch)
-	}()
-	go func() {
-		done := make(chan struct{}, 1)
-
-		go func() {
-			cmd.Process.Wait()
-			done <- struct{}{}
-		}()
-
-		select {
-		case <-done:
-			return
-		case <-c.stop:
-			cmd.Process.Signal(os.Interrupt)
-		}
 	}()
 
 	return ch
@@ -107,7 +98,9 @@ func (c *TCPConnLat) Start() <-chan []byte {
 
 // Stop will send SIGINT to the prober
 func (c *TCPConnLat) Stop() {
-	c.stop <- struct{}{}
+	c.proc.Process.Signal(os.Interrupt)
+	c.proc.Wait()
+	log.Logf("Stopped TCP Connection Latency Prober")
 }
 
 // ParseStdout will convert the prober stdout to TCPConnLatData
