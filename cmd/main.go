@@ -11,9 +11,12 @@ import (
 func main() {
 	prog := ebpf.NewTCPConnLat()
 	ch := prog.Start()
-	for data := range ch {
-		log.DataLog(data)
-	}
+
+	go func() {
+		for data := range ch {
+			log.DataLog(data)
+		}
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
