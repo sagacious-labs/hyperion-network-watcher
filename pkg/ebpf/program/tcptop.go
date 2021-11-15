@@ -15,33 +15,35 @@ import (
 //
 // It provides interface to get TCP connection latency
 // data from the host machine
-type TCPConnLat struct {
+type TCPTop struct {
 	bin  string
 	proc *exec.Cmd
 }
 
 // TCPConnLatData is the data format which is internally returned
 // by the probe
-type TCPConnLatData struct {
-	Type     string  `json:"@type"`
-	PID      int     `json:"-"`
-	Host     string  `json:"host,omitempty"`
-	IPType   uint8   `json:"ip_type,omitempty"`
-	SourceIP string  `json:"source_ip,omitempty"`
-	DestIP   string  `json:"dest_ip,omitempty"`
-	DestPort string  `json:"dest_port,omitempty"`
-	Latency  float64 `json:"latency,omitempty"`
+type TCPTopData struct {
+	Type       string  `json:"@type,omitempty"`
+	PID        int     `json:"-"`
+	Host       string  `json:"host,omitempty"`
+	IPType     uint8   `json:"ip_type,omitempty"`
+	SourceIP   string  `json:"source_ip,omitempty"`
+	SourcePort string  `json:"source_port,omitempty"`
+	DestIP     string  `json:"dest_ip,omitempty"`
+	DestPort   string  `json:"dest_port,omitempty"`
+	RxKB       float64 `json:"rx_kb"`
+	TxKB       float64 `json:"tx_kb"`
 }
 
 // GetPID returns the process id for the data
-func (d *TCPConnLatData) GetPID() int {
+func (d *TCPTopData) GetPID() int {
 	return d.PID
 }
 
 // NewTCPConnLat returns instance of TCP connection latency prober
-func NewTCPConnLat() EBPFProgram {
-	return &TCPConnLat{
-		bin: "/usr/share/bcc/tools/tcpconnlat",
+func NewTCPTop() EBPFProgram {
+	return &TCPTop{
+		bin: "./ebpf/tcptop.py",
 	}
 }
 
@@ -49,7 +51,7 @@ func NewTCPConnLat() EBPFProgram {
 // to listen for the data coming though the prober
 //
 // NOTE: The channel must not be blocked
-func (c *TCPConnLat) Start() <-chan EBPFProgramData {
+func (c *TCPTop) Start() <-chan EBPFProgramData {
 	cmd := exec.Command(c.bin)
 	c.proc = cmd
 
@@ -94,7 +96,7 @@ func (c *TCPConnLat) Start() <-chan EBPFProgramData {
 }
 
 // Stop will send SIGINT to the prober
-func (c *TCPConnLat) Stop() {
+func (c *TCPTop) Stop() {
 	if c.proc == nil {
 		return
 	}
@@ -102,14 +104,14 @@ func (c *TCPConnLat) Stop() {
 	c.proc.Process.Signal(os.Interrupt)
 	c.proc.Wait()
 
-	log.Logf("Stopped TCP Connection Latency Prober")
+	log.Logf("Stopped TCP Top Prober")
 }
 
 // ParseStdout will convert the prober stdout to TCPConnLatData
 //
 // NOTE: If the method fails then it will return the error - leaving the
 // responsibility of the lost data to the caller
-func (c *TCPConnLat) ParseStdout(str string) (*TCPConnLatData, error) {
+func (c *TCPTop) ParseStdout(str string) (*TCPTopData, error) {
 	splitted := strings.Split(str, " ")
 
 	aggregate := []string{}
@@ -120,8 +122,8 @@ func (c *TCPConnLat) ParseStdout(str string) (*TCPConnLatData, error) {
 		}
 	}
 
-	if len(aggregate) != 7 {
-		return nil, errors.New("stdout data of the prober must be of len() = 7")
+	if len(aggregate) != 9 {
+		return nil, errors.New("stdout data of the prober must be of len() = 9")
 	}
 
 	// Get process ID
@@ -142,26 +144,37 @@ func (c *TCPConnLat) ParseStdout(str string) (*TCPConnLatData, error) {
 	// Get source IP address
 	srcIP := aggregate[3]
 
+	// Get source port
+	srcPort := aggregate[4]
+
 	// Get destination IP address
-	destIP := aggregate[4]
+	destIP := aggregate[5]
 
 	// Get destination port
-	destPort := aggregate[5]
+	destPort := aggregate[6]
 
-	// Get latency
-	latency, err := strconv.ParseFloat(aggregate[6], 64)
+	// Get RX
+	rx, err := strconv.ParseFloat(aggregate[7], 64)
 	if err != nil {
 		return nil, err
 	}
 
-	return &TCPConnLatData{
-		Type:     CONNECTION_LATENCY,
-		PID:      pid,
-		Host:     host,
-		IPType:   uint8(ipType),
-		SourceIP: srcIP,
-		DestIP:   destIP,
-		DestPort: destPort,
-		Latency:  latency,
+	// Get TX
+	tx, err := strconv.ParseFloat(aggregate[8], 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TCPTopData{
+		Type:       TCP_TOP,
+		PID:        pid,
+		Host:       host,
+		IPType:     uint8(ipType),
+		SourceIP:   srcIP,
+		SourcePort: srcPort,
+		DestIP:     destIP,
+		DestPort:   destPort,
+		TxKB:       tx,
+		RxKB:       rx,
 	}, nil
 }

@@ -25,6 +25,11 @@ func (ebpf *EBPF) Start() <-chan []byte {
 	ebpf.progs = append(ebpf.progs, prog)
 	go ebpf.manageData(prog, ch)
 
+	// TCP Top program
+	progTop := program.NewTCPTop()
+	ebpf.progs = append(ebpf.progs, progTop)
+	go ebpf.manageData(progTop, ch)
+
 	return ch
 }
 

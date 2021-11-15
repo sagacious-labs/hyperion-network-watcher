@@ -2,6 +2,7 @@ package program
 
 const (
 	CONNECTION_LATENCY = "hyperion.sagacious.dev/data/network/latency"
+	TCP_TOP            = "hyperion.sagacious.dev/data/network/tcp/top"
 )
 
 // EBPFProgram interface is to provide an abstraction
