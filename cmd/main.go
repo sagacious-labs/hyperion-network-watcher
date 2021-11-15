@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	prog := ebpf.NewTCPConnLat()
-	ch := prog.Start()
+	probe := ebpf.New()
+	ch := probe.Start()
 
 	go func() {
 		for data := range ch {
@@ -22,5 +22,5 @@ func main() {
 	signal.Notify(stop, os.Interrupt)
 
 	<-stop
-	prog.Stop()
+	probe.Stop()
 }

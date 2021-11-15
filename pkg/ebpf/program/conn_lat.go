@@ -1,8 +1,7 @@
-package ebpf
+package program
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -24,7 +23,8 @@ type TCPConnLat struct {
 // TCPConnLatData is the data format which is internally returned
 // by the probe
 type TCPConnLatData struct {
-	PID      int     `json:"pid,omitempty"`
+	Type     string  `json:"@type"`
+	PID      int     `json:"-"`
 	Host     string  `json:"host,omitempty"`
 	IPType   uint8   `json:"ip_type,omitempty"`
 	SourceIP string  `json:"source_ip,omitempty"`
@@ -33,12 +33,9 @@ type TCPConnLatData struct {
 	Latency  float64 `json:"latency,omitempty"`
 }
 
-// ToBytes will convert the TCPConnLatData to bytes. This process
-// converts the struct into json, if the process fails then NO error
-// is returned, just nil is returned
-func (d *TCPConnLatData) ToBytes() []byte {
-	byt, _ := json.Marshal(d)
-	return byt
+// GetPID returns the process id for the data
+func (d *TCPConnLatData) GetPID() int {
+	return d.PID
 }
 
 // NewTCPConnLat returns instance of TCP connection latency prober
@@ -52,7 +49,7 @@ func NewTCPConnLat() EBPFProgram {
 // to listen for the data coming though the prober
 //
 // NOTE: The channel must not be blocked
-func (c *TCPConnLat) Start() <-chan []byte {
+func (c *TCPConnLat) Start() <-chan EBPFProgramData {
 	cmd := exec.Command(c.bin)
 	c.proc = cmd
 
@@ -61,7 +58,7 @@ func (c *TCPConnLat) Start() <-chan []byte {
 
 	stdout, _ := cmd.StdoutPipe()
 
-	ch := make(chan []byte, 8)
+	ch := make(chan EBPFProgramData, 8)
 
 	if err := cmd.Start(); err != nil {
 		println(err.Error())
@@ -87,7 +84,7 @@ func (c *TCPConnLat) Start() <-chan []byte {
 				continue
 			}
 
-			ch <- parsed.ToBytes()
+			ch <- parsed
 		}
 
 		close(ch)
@@ -100,6 +97,7 @@ func (c *TCPConnLat) Start() <-chan []byte {
 func (c *TCPConnLat) Stop() {
 	c.proc.Process.Signal(os.Interrupt)
 	c.proc.Wait()
+
 	log.Logf("Stopped TCP Connection Latency Prober")
 }
 
@@ -153,6 +151,7 @@ func (c *TCPConnLat) ParseStdout(str string) (*TCPConnLatData, error) {
 	}
 
 	return &TCPConnLatData{
+		Type:     CONNECTION_LATENCY,
 		PID:      pid,
 		Host:     host,
 		IPType:   uint8(ipType),
