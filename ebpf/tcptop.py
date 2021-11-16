@@ -169,7 +169,7 @@ while not exiting:
 
     # output
     for k, (send_bytes, recv_bytes) in sorted(ipv4_throughput.items(), key=lambda kv: sum(kv[1]), reverse=True):
-        print("%-6d %-12.12s 4 %-16s %-4s %-16s %-4s %6d %6d" % (k.pid, pid_to_comm(k.pid), k.laddr, str(k.lport), k.daddr, str(k.dport), int(recv_bytes / 1024), int(send_bytes / 1024)))
+        print("%-6d %-12.12s 4 %-16s %-4s %-16s %-4s %6f %6f" % (k.pid, pid_to_comm(k.pid), k.laddr, str(k.lport), k.daddr, str(k.dport), recv_bytes / 1024, send_bytes / 1024))
 
     # IPv6: build dict of all seen keys
     ipv6_throughput = defaultdict(lambda: [0, 0])
@@ -185,4 +185,4 @@ while not exiting:
 
     # output
     for k, (send_bytes, recv_bytes) in sorted(ipv6_throughput.items(), key=lambda kv: sum(kv[1]), reverse=True):
-        print("%-6d %-12.12s 6 %-28s %-4s %-28s %-4s %6d %6d" % (k.pid, pid_to_comm(k.pid), k.laddr, str(k.lport), k.daddr, str(k.dport), int(recv_bytes / 1024), int(send_bytes / 1024)))
+        print("%-6d %-12.12s 6 %-28s %-4s %-28s %-4s %6f %6f" % (k.pid, pid_to_comm(k.pid), k.laddr, str(k.lport), k.daddr, str(k.dport), recv_bytes / 1024, send_bytes / 1024))
