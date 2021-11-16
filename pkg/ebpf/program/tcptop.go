@@ -43,7 +43,7 @@ func (d *TCPTopData) GetPID() int {
 // NewTCPConnLat returns instance of TCP connection latency prober
 func NewTCPTop() EBPFProgram {
 	return &TCPTop{
-		bin: "./ebpf/tcptop.py",
+		bin: "/usr/share/hyperion/tools/tcp/tcptop.py",
 	}
 }
 
@@ -63,7 +63,7 @@ func (c *TCPTop) Start() <-chan EBPFProgramData {
 	ch := make(chan EBPFProgramData, 8)
 
 	if err := cmd.Start(); err != nil {
-		println(err.Error())
+		log.Logf(err.Error())
 		return nil
 	}
 

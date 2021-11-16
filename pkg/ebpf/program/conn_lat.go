@@ -61,7 +61,7 @@ func (c *TCPConnLat) Start() <-chan EBPFProgramData {
 	ch := make(chan EBPFProgramData, 8)
 
 	if err := cmd.Start(); err != nil {
-		println(err.Error())
+		log.Logf(err.Error())
 		return nil
 	}
 
