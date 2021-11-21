@@ -21,7 +21,7 @@ jobs:
       - name: Bundle Assets
         uses: papeloto/action-zip@v1
         with:
-          files: bin/ ebpf/
+          files: bin/ ebpf
           dest: hyperion.zip
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
