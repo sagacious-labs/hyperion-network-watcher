@@ -1,0 +1,23 @@
+name: "Hyperion Network Watcher Wodule"
+
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  pre-release:
+    name: "Pre Release"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Build"
+        run: CGO_ENABLED=0 make compile
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Hyperion Network Watcher Wodule"
+          files: |
+            bin/*
+            ebpf/*
