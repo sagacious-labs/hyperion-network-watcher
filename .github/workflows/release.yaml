@@ -10,9 +10,9 @@ jobs:
     name: "Pre Release"
     runs-on: "ubuntu-latest"
     steps:
-      - name: DEBUG
-        run: ls
-      - name: "Build"
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
         run: CGO_ENABLED=0 make compile
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
